@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      font-size: 12px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #2b2b2b;
+      border-bottom: 1px solid #3c3c3c;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    header h1 { font-size: 13px; margin: 0 auto 0 0; font-weight: 600; white-space: nowrap; }
+    button {
+      background: #3c3c3c;
+      color: #e0e0e0;
+      border: 1px solid #4a4a4a;
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:hover { background: #4a4a4a; }
+    button.primary { background: #0d99ff; border-color: #0d99ff; color: #fff; }
+    button.primary:hover { background: #0090f5; }
+    input {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      border: 1px solid #4a4a4a;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 12px;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      min-width: 0;
+    }
+    .tabs { display: flex; border-bottom: 1px solid #333; background: #262626; }
+    .tab {
+      padding: 7px 16px;
+      cursor: pointer;
+      color: #9a9a9a;
+      border: none;
+      background: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+    }
+    .tab.active { color: #e0e0e0; border-bottom-color: #0d99ff; background: #2b2b2b; }
+    .tab:hover { background: #333; }
+    #meta {
+      padding: 8px 12px;
+      color: #9a9a9a;
+      border-bottom: 1px solid #333;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      user-select: text;
+    }
+    #error {
+      padding: 8px 12px;
+      background: #4a1f1f;
+      color: #ffb4b4;
+      border-bottom: 1px solid #6b2b2b;
+      display: none;
+    }
+    #hint {
+      padding: 24px 12px;
+      color: #9a9a9a;
+      text-align: center;
+    }
+    .pane {
+      margin: 0;
+      padding: 12px;
+      white-space: pre;
+      overflow: auto;
+      font-family: "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      user-select: text;
+    }
+    #tree ul { list-style: none; padding-left: 14px; margin: 0; }
+    #tree li { padding: 1px 0; white-space: nowrap; }
+    #tree .nm { color: #e0e0e0; }
+    #tree .ty {
+      display: inline-block;
+      margin: 0 6px;
+      padding: 0 5px;
+      border-radius: 3px;
+      font-size: 10px;
+      background: #3c3c3c;
+      color: #9cdcfe;
+      vertical-align: 1px;
+    }
+    #tree .dim { color: #9a9a9a; }
+    #tree .txt { color: #ce9178; }
+    label { display: flex; align-items: center; gap: 5px; white-space: nowrap; color: #9a9a9a; cursor: pointer; }
+
+    .bar { display: flex; gap: 6px; margin-bottom: 8px; white-space: normal; }
+    #b-status { color: #9a9a9a; margin-bottom: 8px; min-height: 14px; white-space: normal; }
+    .b-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 2px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .b-row:hover { background: #2f2f2f; }
+    .b-tw {
+      padding: 0 4px;
+      min-width: 18px;
+      font-size: 10px;
+      line-height: 14px;
+      background: transparent;
+      border: none;
+      color: #9a9a9a;
+    }
+    .b-tw:hover { background: #3c3c3c; }
+    .b-label { color: #e0e0e0; }
+    .b-meta { color: #7a7a7a; font-size: 10px; }
+    .b-kids { margin-left: 14px; }
+    .b-kids[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Figma Inspector</h1>
+    <button class="primary" id="refresh">Refresh</button>
+    <button id="copy">Copy</button>
+    <button id="download">Download</button>
+    <label><input type="checkbox" id="auto" checked /> Auto</label>
+  </header>
+  <div id="meta"><span id="mcpStatus"></span></div>
+  <div id="error"></div>
+  <div class="tabs">
+    <button class="tab active" data-view="json">JSON</button>
+    <button class="tab" data-view="tree">Tree</button>
+    <button class="tab" data-view="ai">AI Prompt</button>
+    <button class="tab" data-view="browse">Browse</button>
+  </div>
+  <div id="hint" hidden>Select one or more nodes in the canvas, then press Refresh — or pick a node in Browse.</div>
+  <pre id="json" class="pane"></pre>
+  <div id="tree" class="pane" hidden></div>
+  <pre id="ai" class="pane" hidden></pre>
+  <div id="browse" class="pane" hidden>
+    <div class="bar">
+      <button id="b-pages">Pages</button>
+      <input id="b-id" placeholder="node id, e.g. 1:23" />
+      <button id="b-select">Select</button>
+    </div>
+    <div id="b-status">Loads the document tree lazily. Click a row to select it in Figma.</div>
+    <div id="b-tree"></div>
+  </div>
+
+  <script>
+    'use strict';
+    const jsonEl = document.getElementById('json');
+    const treeEl = document.getElementById('tree');
+    const aiEl = document.getElementById('ai');
+    const browseEl = document.getElementById('browse');
+    const metaEl = document.getElementById('meta');
+    const mcpEl = document.getElementById('mcpStatus');
+    const hintEl = document.getElementById('hint');
+    const errorEl = document.getElementById('error');
+    const bStatusEl = document.getElementById('b-status');
+    const bTreeEl = document.getElementById('b-tree');
+    let current = {};
+    let view = 'json';
+    let jsonText = '';
+    /* Only the visible tab is materialized: building the JSON text node, the tree DOM and the
+     * AI prompt for a multi-thousand-node dump at once is what locks the panel up. */
+    let built = { json: false, tree: false };
+    const MCP_URL = 'http://localhost:8790/snapshot';
+
+    function showError(message) {
+      errorEl.textContent = message;
+      errorEl.style.display = message ? 'block' : 'none';
+    }
+
+    function pushSnapshot(data) {
+      fetch(MCP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: data, aiText: aiEl.textContent })
+      })
+        .then((r) => { mcpEl.textContent = r.ok ? 'MCP: pushed' : 'MCP: HTTP ' + r.status; })
+        .catch((e) => { mcpEl.textContent = 'MCP: offline — ' + ((e && e.message) || 'fetch failed'); });
+    }
+
+    const fmt = (v) => (Math.round(v * 10) / 10);
+    const hex2 = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
+    const escape = (s) => String(s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const bytes = (n) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+
+    function paintHex(fills) {
+      if (!Array.isArray(fills) || !fills.length) return null;
+      const s = fills.find((f) => f && f.type === 'SOLID');
+      if (!s) return fills.map((f) => f.type).join(',');
+      let h = '#' + hex2(s.color.r) + hex2(s.color.g) + hex2(s.color.b);
+      if (s.opacity !== undefined && s.opacity < 1) h += hex2(s.opacity);
+      return h;
+    }
+
+    function paddings(n) {
+      const l = n.paddingLeft, r = n.paddingRight, t = n.paddingTop, b = n.paddingBottom;
+      if ([l, r, t, b].every((v) => v === l)) return fmt(l) + ' all';
+      if (l === r && t === b && l !== undefined) return fmt(t) + '×' + fmt(l);
+      return (t !== undefined ? 'T' + fmt(t) : '') + (r !== undefined ? ' R' + fmt(r) : '') +
+             (b !== undefined ? ' B' + fmt(b) : '') + (l !== undefined ? ' L' + fmt(l) : '');
+    }
+
+    function alignLabel(n) {
+      if (!n.layoutMode) return null;
+      const col = n.layoutMode === 'VERTICAL';
+      const main = col ? n.primaryAxisAlignItems : n.counterAxisAlignItems;
+      const cross = col ? n.counterAxisAlignItems : n.primaryAxisAlignItems;
+      const L = { MIN: 'left/top', CENTER: 'center', MAX: 'right/bottom', SPACE_BETWEEN: 'space-between',
+        SPACE_AROUND: 'space-around', SPACE_EVENLY: 'space-evenly', BASELINE: 'baseline' };
+      return L[main] + ' (main) · ' + L[cross] + ' (cross)';
+    }
+
+    function sizingLabel(n) {
+      if (!n.layoutMode) return null;
+      const map = { FIXED: 'fixed', AUTO: 'hug', FILL: 'fill' };
+      const h = map[n.layoutSizingHorizontal], v = map[n.layoutSizingVertical];
+      if (!h || !v) return null;
+      if (h === 'fixed' && v === 'fixed') return null;
+      if (h === v) return h;
+      return h + '(w)/' + v + '(h)';
+    }
+
+    function siblingGaps(parent) {
+      if (!parent.children || parent.children.length < 2) return null;
+      const col = parent.layoutMode === 'VERTICAL';
+      let kids = parent.children.slice();
+      kids.sort((a, b) => {
+        const pa = col ? a.y : a.x;
+        const pb = col ? b.y : b.x;
+        return pa - pb;
+      });
+      const gaps = [];
+      for (let i = 1; i < kids.length; i++) {
+        const p = kids[i - 1], n = kids[i];
+        const prevEnd = col ? p.y + p.height : p.x + p.width;
+        const nextStart = col ? n.y : n.x;
+        gaps.push(Math.round((nextStart - prevEnd) * 10) / 10);
+      }
+      const min = Math.min.apply(null, gaps), max = Math.max.apply(null, gaps);
+      const allEqual = min === max;
+      return allEqual ? 'gap ' + min : 'gaps ' + min + '–' + max;
+    }
+
+    function textInfo(n) {
+      const parts = [];
+      if (n.characters !== undefined) {
+        let t = String(n.characters).replace(/\s*\n\s*/g, ' / ').trim();
+        if (t.length > 60) t = t.slice(0, 59) + '…';
+        parts.push('text: "' + t + '"');
+      }
+      if (n.fontSize !== undefined) {
+        const fn = n.fontName;
+        parts.push('font: ' + (fn ? fn.family + ' / ' + fn.style : '') + ' ' + fmt(n.fontSize) + 'px');
+      }
+      const col = paintHex(n.fills);
+      if (col) parts.push('color: ' + col);
+      if (n.textAlignHorizontal) parts.push('align-text: ' + n.textAlignHorizontal.toLowerCase());
+      if (n.textSegments && n.textSegments.length > 1) parts.push('mixed-styles: ' + n.textSegments.length + ' segment(s)');
+      return parts.length ? '  → ' + parts.join(' · ') : '';
+    }
+
+    function componentPropLabel(props) {
+      return Object.entries(props).map(([k, v]) => {
+        const val = v && typeof v === 'object' && 'value' in v ? v.value : v;
+        return k + '=' + (typeof val === 'object' ? JSON.stringify(val) : val);
+      }).join(', ');
+    }
+
+    function nodeBlock(n, depth, out) {
+      const pad = '  '.repeat(depth);
+      const name = n.name || ('#' + (n.id || '?'));
+      const size = n.width !== undefined ? ' (' + fmt(n.width) + '×' + fmt(n.height) + ')' : '';
+      const pos = n.x !== undefined ? ' @ (' + fmt(n.x) + ',' + fmt(n.y) + ')' : '';
+      out.push(pad + '[' + n.type + '] ' + name + size + pos);
+
+      const info = [];
+      if (n.layoutMode) {
+        info.push('flex ' + (n.layoutMode === 'VERTICAL' ? 'column' : 'row'));
+        const p = paddings(n);
+        if (p && p !== '0 all') info.push('padding ' + p);
+        const al = alignLabel(n);
+        if (al) info.push('align ' + al);
+        const sz = sizingLabel(n);
+        if (sz) info.push('sizing ' + sz);
+        if (n.clipsContent) info.push('clips-overflow');
+      }
+      if (n.layoutWrap && n.layoutWrap !== 'NO_WRAP') info.push('wrap');
+      if (n.cornerRadius && n.cornerRadius > 0) info.push('radius ' + fmt(n.cornerRadius));
+      const fill = paintHex(n.fills);
+      if (fill) info.push('fill ' + fill);
+      if (n.strokeWeight && n.strokeWeight > 0) {
+        const sc = paintHex(n.strokes);
+        info.push('stroke ' + fmt(n.strokeWeight) + (sc ? ' ' + sc : ''));
+      }
+      if (n.opacity !== undefined && n.opacity < 1) info.push('opacity ' + Math.round(n.opacity * 100) + '%');
+      if (n.effects && n.effects.length) {
+        const t = [...new Set(n.effects.map((e) => e.type))].join(',');
+        info.push('effect ' + t.toLowerCase().replace(/_/g, ' '));
+      }
+      if (n.layoutGrids && n.layoutGrids.length) info.push('grids ' + n.layoutGrids.length);
+      if (info.length) out.push(pad + '  · ' + info.join(' · '));
+
+      if (n.characters !== undefined) {
+        const ti = textInfo(n);
+        if (ti) out.push(pad + '  ' + ti.trim());
+      }
+      if (n.textLayer && n.textLayer.characters !== undefined) {
+        out.push(pad + '  → sublayer text: "' +
+          String(n.textLayer.characters).replace(/\s*\n\s*/g, ' / ').slice(0, 60) + '"');
+      }
+      if (n.componentProperties) {
+        out.push(pad + '  → props: ' + componentPropLabel(n.componentProperties));
+      }
+      if (n.mainComponentId) out.push(pad + '  → main component: ' + n.mainComponentId);
+
+      for (const c of n.children || []) nodeBlock(c, depth + 1, out);
+      if (n.children && n.children.length) {
+        const g = siblingGaps(n);
+        if (g) out.push(pad + '  → children ' + g);
+      }
+    }
+
+    function aiPrompt(data) {
+      const out = [];
+      out.push('Figma design file: "' + (data.file && data.file.name ? data.file.name : '?') + '"');
+      if (data.page) out.push('Page: "' + data.page.name + '"');
+      out.push('Selected ' + data.selectionCount + ' node(s), ' + data.totalNodeCount + ' node(s) in subtree.' +
+        (data.truncated ? ' TRUNCATED: only the first ' + data.maxNodes + ' nodes are listed — narrow the selection for a complete layout.' : ''));
+      out.push('Reproduce this layout as code: every node is listed parent→child, with spacing between siblings.');
+      out.push('');
+      for (const n of data.selection) nodeBlock(n, 0, out);
+      return out.join('\n');
+    }
+
+    function treeNode(n) {
+      const dim = (n.width !== undefined && n.height !== undefined) ? n.width + '×' + n.height : '';
+      let inner = '<span class="nm"></span><span class="ty">' + n.type + '</span>';
+      if (dim) inner += '<span class="dim"> ' + dim + '</span>';
+      if (n.characters !== undefined) {
+        let t = String(n.characters).replace(/\n/g, '\\n');
+        if (t.length > 40) t = t.slice(0, 39) + '…';
+        inner += '<span class="txt"> "' + escape(t) + '"</span>';
+      }
+      const li = document.createElement('li');
+      li.innerHTML = inner;
+      li.querySelector('.nm').textContent = n.name || ('#' + (n.id || '?'));
+      li.title = n.id || '';
+      if (n.children && n.children.length) {
+        const ul = document.createElement('ul');
+        for (const c of n.children) ul.appendChild(treeNode(c));
+        li.appendChild(ul);
+      }
+      return li;
+    }
+
+    function renderTree(data) {
+      treeEl.textContent = '';
+      if (!data.selection.length) return;
+      const ul = document.createElement('ul');
+      for (const n of data.selection) ul.appendChild(treeNode(n));
+      treeEl.appendChild(ul);
+    }
+
+    function metaText(data, jsonLength) {
+      const parts = [
+        'Selection: ' + data.selectionCount + ' node(s)',
+        'Total node(s): ' + data.totalNodeCount + (data.truncated ? ' (TRUNCATED at cap ' + data.maxNodes + ')' : '')
+      ];
+      if (data.file && data.file.name) parts.push('File: ' + data.file.name);
+      if (data.page) parts.push('Page: ' + data.page.name);
+      if (data.referenceCounts) {
+        parts.push('Refs: ' + data.referenceCounts.styles + ' style / ' +
+          data.referenceCounts.variables + ' var / ' + data.referenceCounts.components + ' component');
+      }
+      parts.push('Exported: ' + new Date(data.exportedAt).toLocaleTimeString());
+      parts.push('JSON: ' + bytes(jsonLength));
+      return parts.join('  |  ');
+    }
+
+    function render(data) {
+      current = data;
+      jsonText = JSON.stringify(data, null, 2);
+      built = { json: false, tree: false };
+      metaEl.textContent = metaText(data, new Blob([jsonText]).size);
+      metaEl.appendChild(mcpEl);
+      aiEl.textContent = aiPrompt(data);
+      hintEl.hidden = data.selectionCount > 0;
+      showError('');
+      ensureView(view);
+      /* POST body is another full stringify of the dump — let the pane paint first. */
+      setTimeout(() => pushSnapshot(data), 0);
+    }
+
+    function ensureView(v) {
+      if (built[v]) return;
+      built[v] = true;
+      if (v === 'json') jsonEl.textContent = jsonText;
+      if (v === 'tree') renderTree(current);
+    }
+
+    function viewText() {
+      ensureView(view === 'browse' ? 'json' : view);
+      if (view === 'ai') return aiEl.textContent;
+      if (view === 'tree') return treeEl.textContent;
+      return jsonEl.textContent;
+    }
+
+    function switchView(v) {
+      view = v;
+      jsonEl.hidden = v !== 'json';
+      treeEl.hidden = v !== 'tree';
+      aiEl.hidden = v !== 'ai';
+      browseEl.hidden = v !== 'browse';
+      ensureView(v);
+      document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === v));
+    }
+
+    /* ---- browse ---- */
+    const slots = new Map();   // parentId (or 'roots') -> container element
+    const open = new Map();    // node id -> { kids, tw, item }
+
+    function requestChildren(id) {
+      parent.postMessage({ pluginMessage: { type: 'children', id: id || null } }, '*');
+    }
+
+    function toggleKids(item, kids, tw) {
+      if (kids.hidden) {
+        kids.hidden = false;
+        tw.textContent = '▾';
+        if (!kids.dataset.loaded) requestChildren(item.id);
+      } else {
+        kids.hidden = true;
+        tw.textContent = '▸';
+      }
+    }
+
+    function browseItem(item, container, suffix) {
+      const row = document.createElement('div');
+      row.className = 'b-row';
+      const tw = document.createElement('button');
+      tw.className = 'b-tw';
+      tw.textContent = item.childCount ? '▸' : '·';
+      const label = document.createElement('span');
+      label.className = 'b-label';
+      label.textContent = item.name || ('#' + item.id);
+      const meta = document.createElement('span');
+      meta.className = 'b-meta';
+      meta.textContent = item.type + ' · ' + item.id +
+        (item.childCount ? ' · ' + item.childCount + ' children' : '') +
+        (suffix ? ' · ' + suffix : '');
+      row.appendChild(tw);
+      row.appendChild(label);
+      row.appendChild(meta);
+      row.title = 'Click to select in Figma';
+      row.addEventListener('click', () => {
+        bStatusEl.textContent = 'Selecting ' + item.type + ' "' + (item.name || item.id) + '"…';
+        parent.postMessage({ pluginMessage: { type: 'select', id: item.id } }, '*');
+      });
+      const kids = document.createElement('div');
+      kids.className = 'b-kids';
+      kids.hidden = true;
+      tw.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (item.childCount) toggleKids(item, kids, tw);
+      });
+      container.appendChild(row);
+      container.appendChild(kids);
+      open.set(item.id, kids);
+    }
+
+    function renderChildren(parentId, items) {
+      const container = parentId ? open.get(parentId) : slots.get('roots');
+      if (!container) return;
+      container.dataset.loaded = '1';
+      container.textContent = '';
+      if (!items.length) {
+        const none = document.createElement('div');
+        none.className = 'b-meta';
+        none.textContent = '(no children)';
+        container.appendChild(none);
+        return;
+      }
+      for (const item of items) browseItem(item, container);
+    }
+
+    function renderPages(items, currentPageId) {
+      bTreeEl.textContent = '';
+      const root = document.createElement('div');
+      slots.set('roots', root);
+      bTreeEl.appendChild(root);
+      for (const p of items) browseItem(p, root, p.id === currentPageId ? 'current page' : '');
+      root.dataset.loaded = '1';
+    }
+
+    /* ---- wiring ---- */
+    function requestRefresh() {
+      parent.postMessage({ pluginMessage: { type: 'refresh' } }, '*');
+    }
+
+    document.querySelectorAll('.tab').forEach((t) =>
+      t.addEventListener('click', () => switchView(t.dataset.view)));
+    document.getElementById('refresh').addEventListener('click', requestRefresh);
+    document.getElementById('auto').addEventListener('change', function (e) {
+      if (e.target.checked) requestRefresh();
+    });
+
+    document.getElementById('b-pages').addEventListener('click', () => {
+      bStatusEl.textContent = 'Loading pages…';
+      slots.delete('roots');
+      open.clear();
+      parent.postMessage({ pluginMessage: { type: 'pages' } }, '*');
+    });
+
+    document.getElementById('b-select').addEventListener('click', () => {
+      const id = document.getElementById('b-id').value.trim();
+      if (!id) return;
+      bStatusEl.textContent = 'Selecting ' + id + '…';
+      parent.postMessage({ pluginMessage: { type: 'select', id: id } }, '*');
+    });
+
+    document.getElementById('b-id').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('b-select').click();
+    });
+
+    document.getElementById('copy').addEventListener('click', async function () {
+      const text = viewText();
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+    });
+
+    document.getElementById('download').addEventListener('click', function () {
+      const txt = viewText();
+      const kind = view === 'ai' ? 'ai-prompt' : view === 'tree' ? 'tree' : 'json';
+      const blob = new Blob([txt], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'figma-inspector-' + kind + (kind === 'json' ? '.json' : '.txt');
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    window.onmessage = function (e) {
+      const msg = e.data && e.data.pluginMessage;
+      if (!msg) return;
+      if (msg.type === 'result') return render(msg.data);
+      if (msg.type === 'error') return showError('Snapshot failed: ' + msg.message);
+      if (msg.type === 'pages') return renderPages(msg.items, msg.currentPageId);
+      if (msg.type === 'children') return renderChildren(msg.parentId, msg.items);
+      if (msg.type === 'select-result') {
+        bStatusEl.textContent = msg.ok
+          ? 'Selected [' + msg.nodeType + '] ' + (msg.name || msg.id) + ' — JSON pane updated'
+          : 'Select failed: ' + msg.message;
+        return;
+      }
+    };
+
+    requestRefresh();
+  </script>
+</body>
+</html>

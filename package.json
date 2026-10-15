@@ -1,0 +1,47 @@
+{
+  "name": "figma-inspector-mcp",
+  "version": "0.1.0",
+  "description": "MCP stdio server: receives Figma Inspector plugin snapshots over HTTP and exposes them as MCP tools/resources.",
+  "type": "module",
+  "bin": {
+    "figma-inspector-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist",
+    "server.ts",
+    "code.js",
+    "ui.html",
+    "manifest.json"
+  ],
+  "scripts": {
+    "start": "bun server.ts",
+    "build": "bun build server.ts --target=node --packages external --outfile=dist/server.js",
+    "test": "bun test-mcp.ts",
+    "typecheck": "tsc --noEmit",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run test"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "figma",
+    "figma-plugin",
+    "design-to-code"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20",
+    "bun": ">=1.2"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "hono": "^4.13.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.1",
+    "typescript": "^7.0.2",
+    "zod": "^4.6.5"
+  }
+}
