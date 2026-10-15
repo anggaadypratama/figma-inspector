@@ -1,0 +1,11 @@
+{
+  "name": "Figma Inspector",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": ["http://localhost:8790"],
+    "reasoning": "Pushes the selected Figma nodes snapshot to the local figma-inspector MCP server (localhost port 8790) so AI agents can read it."
+  }
+}
